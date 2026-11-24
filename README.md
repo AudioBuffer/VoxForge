@@ -89,7 +89,18 @@ a lock-free shared-memory ring). There is **no shared-library linking**.
 
 ## Build / 编译
 
-Requirements: C++17 compiler, LuaJIT headers (`/usr/include/luajit-2.1`).
+Cross-platform: **Windows · Linux · Android (Termux) · macOS**.
+跨平台：**Windows · Linux · Android · macOS**，单一核心源码。
+
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+```
+
+核心库 `vfcore` 只用标准库；POSIX 相关的 IPC 双进程只在 Unix 上构建。
+The `vfcore` library is standard-library only; the IPC pair builds on Unix only.
+
+### Manual / 手编（无 CMake 时）
 
 ```bash
 # Full engine (DSP + Lua)
