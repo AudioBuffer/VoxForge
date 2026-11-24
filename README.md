@@ -45,35 +45,45 @@ all neural stages are optional and can be disabled for fully offline operation.
 
 ---
 
-## Licensing / 许可证分区
+## Licensing / 许可证分区 —— 单程序双协议聚合体（SPDA）
 
-This repository is a **dual-licensed aggregate**. Each path carries exactly one
-license; the boundary is by directory, not by file.
+*Single-Program Dual-License Aggregate (SPDA)*
 
-| Path / 路径 | Contents / 内容 | License |
-|---|---|---|
-| `src/` | Core engine: G2P, formant DSP, pitch curve, IR/DSL, MIDI | **AGPL-3.0-or-later** |
-| `third_party/klatt-tts/` | Klatt formant core (vendored) | MIT (upstream) |
-| `third_party/tsf/` | TinySoundFont (vendored) | MIT (upstream) |
-| `tools/` | CLI drivers: `kt_sing`, `kt_multi`, `kt_dsl`, `kt_lua`, `bench` … | **AGPL-3.0-or-later** |
-| `scripts/` | Lua scripts and examples | **MIT** |
-| `tests/` | Self-tests | **MIT** |
-| `docs/` | Documentation | **MIT** |
+本仓库的协议边界**不是目录，而是进程**。引擎被切成两个独立进程，只通过
+IPC（文本 IR + 共享内存环形缓冲）通信，**没有 DSO 链接**。
+
+The license boundary follows **processes, not folders**. The engine is split
+into two processes that communicate only via IPC (text IR over stdin, PCM over
+a lock-free shared-memory ring). There is **no shared-library linking**.
+
+```
+┌──────────────────────┐        IR (stdin)        ┌──────────────────────┐
+│  Frontend  (MIT)     │ ───────────────────────► │  Backend  (AGPL-3.0) │
+│  Lua, UI, DSL/score  │ ◄─────────────────────── │  DSP, formants, IR   │
+└──────────────────────┘  PCM (shared memory)     └──────────────────────┘
+```
+
+| Component / 组件 | Path | Process | License |
+|---|---|---|---|
+| Lua control layer, scripts | `scripts/`, `tools/kt_lua.cpp` | frontend | **MIT** |
+| Score / DSL / IR formatting | `src/ir.h`, `src/dsl_*` | frontend | **MIT** |
+| Frontend driver | `src/frontend/` | frontend | **MIT** |
+| Formant engine, G2P, pitch, MIDI | `src/core/`, `src/backend/` | backend | **AGPL-3.0-or-later** |
+| CLI batch tools | `tools/kt_sing`, `kt_multi`, `kt_dsl`, `bench` | backend | **AGPL-3.0-or-later** |
+| Vendored Klatt core | `third_party/klatt-tts/` | backend | MIT (upstream) |
+| TinySoundFont | `third_party/tsf/` | backend | MIT (upstream) |
 
 **Rules / 规则**
 
-1. Linking `src/` or `tools/` into a program makes that program subject to
-   AGPL-3.0. 将 `src/` 或 `tools/` 链接进程序，该程序需遵循 AGPL-3.0。
-2. Lua scripts, DSL files and user scores are **independent works** and may be
-   distributed under any license, including proprietary.
-   Lua 脚本、DSL 工程与用户乐谱属于**独立作品**，可用任意许可（含闭源）。
-3. Vendored third-party code keeps its upstream MIT notice; those notices must
-   be preserved in binary distributions.
-   第三方代码保留原 MIT 声明，二进制分发时同样必须保留。
-
-> ⚠️ `espeak-ng` is used **only** as an external comparison tool during
-> development. It is GPLv3 and **must not be bundled** into any distribution.
-> `espeak-ng` 仅作为开发期对比工具调用，禁止打包进发行物。
+1. The two processes exchange only bytes (IR text, PCM), never function calls.
+   两个进程只交换字节，不共享地址空间、不互相链接。
+2. Because of that isolation, the AGPL backend **does not extend** to the MIT
+   frontend or to user scores — this is the "aggregate" in SPDA.
+   正因为隔离，AGPL 后端**不传染** MIT 前端与用户乐谱，这就是「聚合体」的含义。
+3. Vendored MIT notices must be preserved in binary distributions.
+   第三方 MIT 声明在二进制分发时必须保留。
+4. `espeak-ng` (GPLv3) is a development-time comparison tool only and
+   **must not be bundled**. `espeak-ng` 仅开发期使用，禁止打包。
 
 ---
 
